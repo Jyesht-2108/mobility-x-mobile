@@ -109,4 +109,46 @@ export async function llmGenerateItineraries(params: {
   return { itineraries: [] };
 }
 
+export async function llmPredictCost(params: {
+  originText: string;
+  destinationText: string;
+  cityHint?: string;
+  distanceKm: number;
+  mode: string;
+  apiKey: string;
+}): Promise<number> {
+  const { originText, destinationText, cityHint, distanceKm, mode, apiKey } = params;
+  const sys = 'You are a cost prediction expert for urban transportation. Given trip details, predict the realistic cost in cents (USD). Consider local pricing, distance, and transport mode. Return only a JSON number.';
+  const user = `Trip: ${originText} -> ${destinationText}${cityHint ? ` in ${cityHint}` : ''}\nDistance: ${distanceKm.toFixed(1)} km\nMode: ${mode}\nPredict cost in cents (USD). Return JSON: {"costCents": number}`;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: sys },
+        { role: 'user', content: user },
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.2,
+    }),
+    signal: controller.signal,
+  });
+  clearTimeout(timeout);
+  if (!res.ok) throw new Error(`OpenAI error: ${res.status}`);
+  const data = await res.json() as any;
+  const content = data?.choices?.[0]?.message?.content ?? '{}';
+  try {
+    const parsed = JSON.parse(content) as { costCents: number };
+    return Math.max(0, Math.round(parsed.costCents || 0));
+  } catch {}
+  return 0;
+}
+
 
