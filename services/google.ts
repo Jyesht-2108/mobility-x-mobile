@@ -39,15 +39,32 @@ function comfortFor(mode: TransportMode): number {
 
 export async function googleDirections(origin: LatLng, destination: LatLng, mode: Mode): Promise<Itinerary | null> {
   const key = useApiKeyStore.getState().googleMapsApiKey;
-  if (!key) return null;
+  if (!key) {
+    console.log('No Google Maps API key for directions');
+    return null;
+  }
+  
   const o = `${origin.latitude},${origin.longitude}`;
   const d = `${destination.latitude},${destination.longitude}`;
   const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(o)}&destination=${encodeURIComponent(d)}&mode=${mode}&alternatives=false&departure_time=now&key=${encodeURIComponent(key)}`;
+  console.log(`Google Directions URL for ${mode}:`, url);
+  
   const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-  if (!res.ok) return null;
+  console.log(`Google Directions response status for ${mode}:`, res.status);
+  
+  if (!res.ok) {
+    console.log(`Google Directions request failed for ${mode}:`, res.status);
+    return null;
+  }
+  
   const data = await res.json();
+  console.log(`Google Directions response for ${mode}:`, data);
+  
   const r: GoogleRoute | undefined = data?.routes?.[0];
-  if (!r) return null;
+  if (!r) {
+    console.log(`No routes found in Google response for ${mode}`);
+    return null;
+  }
 
   const totalDurationSec = r.legs?.reduce((s: number, l: GoogleLeg) => s + (l.duration?.value ?? 0), 0) ?? 0;
   const totalMinutes = Math.max(1, Math.round(totalDurationSec / 60));
@@ -74,12 +91,30 @@ export async function googleDirections(origin: LatLng, destination: LatLng, mode
 }
 
 export async function googleAllModes(origin: LatLng, destination: LatLng): Promise<Itinerary[]> {
+  console.log('Google All Modes called with:', { origin, destination });
+  const key = useApiKeyStore.getState().googleMapsApiKey;
+  if (!key) {
+    console.log('No Google Maps API key found');
+    return [];
+  }
+  
   const modes: Mode[] = ['transit', 'walking', 'bicycling', 'driving'];
   const results: Itinerary[] = [];
   for (const m of modes) {
-    const it = await googleDirections(origin, destination, m);
-    if (it) results.push(it);
+    try {
+      console.log(`Fetching Google directions for ${m}...`);
+      const it = await googleDirections(origin, destination, m);
+      if (it) {
+        results.push(it);
+        console.log(`Added Google ${m} itinerary:`, it);
+      } else {
+        console.log(`No Google ${m} route found`);
+      }
+    } catch (error) {
+      console.log(`Error fetching Google ${m} route:`, error);
+    }
   }
+  console.log('Google All Modes results:', results.length);
   return results;
 }
 

@@ -51,7 +51,7 @@ export default function WalletScreen() {
       }}>
         <Text style={{ color: '#e2e8f0', fontSize: 16, fontWeight: '600' }}>Current Balance</Text>
         <Text style={{ color: '#fff', fontSize: 36, fontWeight: '900', marginTop: 8 }}>
-          ${wallet ? (wallet.balanceCents / 100).toFixed(2) : '0.00'}
+          ₹{wallet ? (wallet.balanceCents / 100).toFixed(2) : '0.00'}
         </Text>
         
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
@@ -60,7 +60,7 @@ export default function WalletScreen() {
               try {
                 await topUp(1000, 'Card');
                 await refresh();
-                Alert.alert('Success', 'Added $10.00 to your wallet');
+                Alert.alert('Success', 'Added ₹10.00 to your wallet');
               } catch (e: any) {
                 Alert.alert('Error', e?.message ?? 'Top-up failed');
               }
@@ -76,7 +76,7 @@ export default function WalletScreen() {
             }}
           >
             <Ionicons name="add" size={20} color="#22c55e" />
-            <Text style={{ color: '#22c55e', fontWeight: '600', marginTop: 4 }}>Add $10</Text>
+            <Text style={{ color: '#22c55e', fontWeight: '600', marginTop: 4 }}>Add ₹10</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -84,7 +84,7 @@ export default function WalletScreen() {
               try {
                 await topUp(5000, 'Card');
                 await refresh();
-                Alert.alert('Success', 'Added $50.00 to your wallet');
+                Alert.alert('Success', 'Added ₹50.00 to your wallet');
               } catch (e: any) {
                 Alert.alert('Error', e?.message ?? 'Top-up failed');
               }
@@ -100,7 +100,7 @@ export default function WalletScreen() {
             }}
           >
             <Ionicons name="card" size={20} color="#3b82f6" />
-            <Text style={{ color: '#3b82f6', fontWeight: '600', marginTop: 4 }}>Add $50</Text>
+            <Text style={{ color: '#3b82f6', fontWeight: '600', marginTop: 4 }}>Add ₹50</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -147,7 +147,7 @@ export default function WalletScreen() {
                   fontWeight: '700', 
                   fontSize: 16 
                 }}>
-                  {tx.type === 'credit' ? '+' : '-'}${(tx.amountCents / 100).toFixed(2)}
+                  {tx.type === 'credit' ? '+' : '-'}₹{(tx.amountCents / 100).toFixed(2)}
                 </Text>
               </View>
             ))}

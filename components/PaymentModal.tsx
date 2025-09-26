@@ -102,7 +102,7 @@ export default function PaymentModal({ visible, onClose, itinerary, onSuccess }:
         }}>
           <Text style={{ color: '#e2e8f0', fontSize: 16, fontWeight: '600' }}>Current Balance</Text>
           <Text style={{ color: '#fff', fontSize: 28, fontWeight: '900', marginTop: 4 }}>
-            ${wallet ? (wallet.balanceCents / 100).toFixed(2) : '0.00'}
+            ₹{wallet ? (wallet.balanceCents / 100).toFixed(2) : '0.00'}
           </Text>
         </View>
 
@@ -117,7 +117,7 @@ export default function PaymentModal({ visible, onClose, itinerary, onSuccess }:
         }}>
           <Text style={{ color: '#e2e8f0', fontSize: 16, fontWeight: '600', marginBottom: 12 }}>Trip Summary</Text>
           <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700', marginBottom: 8 }}>
-            {Math.round(itinerary.totalTimeMin)} min • ${(itinerary.totalCostCents / 100).toFixed(2)}
+            {Math.round(itinerary.totalTimeMin)} min • ₹{(itinerary.totalCostCents / 100).toFixed(2)}
           </Text>
           
           {/* Cost Breakdown */}
@@ -137,7 +137,7 @@ export default function PaymentModal({ visible, onClose, itinerary, onSuccess }:
                   </Text>
                 </View>
                 <Text style={{ color: '#e2e8f0', fontSize: 14, fontWeight: '600' }}>
-                  ${(leg.costCents / 100).toFixed(2)}
+                  ₹{(leg.costCents / 100).toFixed(2)}
                 </Text>
               </View>
             ))}
@@ -164,7 +164,7 @@ export default function PaymentModal({ visible, onClose, itinerary, onSuccess }:
         >
           <Ionicons name="card" size={24} color="#fff" />
           <Text style={{ color: '#fff', fontWeight: '800', fontSize: 18 }}>
-            {isProcessing ? 'Processing...' : `Confirm Multi-Modal Payment - $${(itinerary.totalCostCents / 100).toFixed(2)}`}
+            {isProcessing ? 'Processing...' : `Confirm Multi-Modal Payment - ₹${(itinerary.totalCostCents / 100).toFixed(2)}`}
           </Text>
         </TouchableOpacity>
 

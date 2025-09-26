@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, TouchableOpacity, Alert, Animated } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
 import type { Itinerary } from '@/types/domain';
 import { FontAwesome, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { processPayment } from '@/services/payments';
@@ -48,6 +49,8 @@ export default function ItineraryCard({ itinerary, allItineraries = [] }: Props)
   const [isProcessing, setIsProcessing] = useState(false);
   const [predictedCost, setPredictedCost] = useState<number | null>(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
   
   const comfortPct = itinerary.averageComfortScore;
   const pctText = Math.round(comfortPct * 100);
@@ -62,7 +65,41 @@ export default function ItineraryCard({ itinerary, allItineraries = [] }: Props)
         console.log('AI learning failed:', error);
       }
     }
+    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     navigation.navigate('Wallet');
+  };
+
+  const handleCardPress = () => {
+    // Ripple effect animation
+    Animated.sequence([
+      Animated.parallel([
+        Animated.timing(scaleAnim, {
+          toValue: 0.95,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 0.7,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]),
+      Animated.parallel([
+        Animated.timing(scaleAnim, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start();
+    
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('RouteMap', { itinerary });
   };
 
   const predictCost = async () => {
@@ -94,9 +131,22 @@ export default function ItineraryCard({ itinerary, allItineraries = [] }: Props)
   }, [openaiApiKey]);
 
   return (
-    <View style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 12, padding: 14, gap: 10, backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6 }}>
+    <Animated.View style={{ 
+      borderWidth: 1, 
+      borderColor: '#e5e7eb', 
+      borderRadius: 12, 
+      padding: 14, 
+      gap: 10, 
+      backgroundColor: '#fff', 
+      shadowColor: '#000', 
+      shadowOpacity: 0.05, 
+      shadowRadius: 6,
+      transform: [{ scale: scaleAnim }],
+      opacity: opacityAnim,
+      elevation: 5
+    }}>
       <TouchableOpacity
-        onPress={() => navigation.navigate('RouteMap', { itinerary })}
+        onPress={handleCardPress}
         activeOpacity={0.8}
         style={{ flex: 1 }}
       >
@@ -104,11 +154,11 @@ export default function ItineraryCard({ itinerary, allItineraries = [] }: Props)
           <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827' }}>{Math.round(itinerary.totalTimeMin)} min</Text>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={{ fontSize: 16, fontWeight: '600', color: '#111827' }}>
-              ${(itinerary.totalCostCents / 100).toFixed(2)}
+              ₹{(itinerary.totalCostCents / 100).toFixed(2)}
             </Text>
             {predictedCost && predictedCost !== itinerary.totalCostCents && (
               <Text style={{ fontSize: 12, color: '#6b7280' }}>
-                AI: ${(predictedCost / 100).toFixed(2)}
+                AI: ₹{(predictedCost / 100).toFixed(2)}
               </Text>
             )}
           </View>
@@ -122,6 +172,24 @@ export default function ItineraryCard({ itinerary, allItineraries = [] }: Props)
             <Text style={{ fontSize: 12, color: '#374151', fontWeight: '600', minWidth: 60 }}>
               Comfort: {pctText}%
             </Text>
+          </View>
+
+          {/* Cost Breakdown */}
+          <View style={{ backgroundColor: '#f9fafb', padding: 8, borderRadius: 6, marginVertical: 4 }}>
+            <Text style={{ fontSize: 12, color: '#6b7280', fontWeight: '600', marginBottom: 4 }}>Fare Breakdown:</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {itinerary.legs.map((l, idx) => {
+                if (l.costCents === 0) return null;
+                return (
+                  <View key={`${itinerary.id}-cost-${idx}`} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    {renderModeIcon(l.mode)}
+                    <Text style={{ fontSize: 11, color: '#374151' }}>
+                      {l.mode === 'METRO' ? 'BMRCL' : l.mode === 'BUS' ? 'BMTC' : l.mode}: ₹{(l.costCents / 100).toFixed(2)}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
           </View>
         </View>
 
@@ -138,7 +206,10 @@ export default function ItineraryCard({ itinerary, allItineraries = [] }: Props)
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={() => setShowPaymentModal(true)}
+        onPress={async () => {
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          setShowPaymentModal(true);
+        }}
         style={{
           backgroundColor: '#3b82f6',
           borderRadius: 8,
@@ -152,7 +223,7 @@ export default function ItineraryCard({ itinerary, allItineraries = [] }: Props)
       >
         <Ionicons name="card" size={16} color="#fff" />
         <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
-          Book & Pay ${(itinerary.totalCostCents / 100).toFixed(2)}
+          Book & Pay ₹{(itinerary.totalCostCents / 100).toFixed(2)}
         </Text>
       </TouchableOpacity>
 
@@ -162,7 +233,7 @@ export default function ItineraryCard({ itinerary, allItineraries = [] }: Props)
         itinerary={itinerary}
         onSuccess={handlePaymentSuccess}
       />
-    </View>
+    </Animated.View>
   );
 }
 

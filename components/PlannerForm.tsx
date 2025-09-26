@@ -37,7 +37,15 @@ export default function PlannerForm({ onSubmit }: Props) {
             if (originTimerRef.current) clearTimeout(originTimerRef.current);
             originTimerRef.current = setTimeout(async () => {
               if (t.length >= 3) {
-                try { const res = await autocomplete(t, 5); setOriginSuggestions(res); } catch { setOriginSuggestions([]); }
+                try { 
+                  console.log('Fetching autocomplete for origin:', t);
+                  const res = await autocomplete(t, 5); 
+                  console.log('Origin autocomplete results:', res);
+                  setOriginSuggestions(res); 
+                } catch (error) { 
+                  console.error('Origin autocomplete error:', error);
+                  setOriginSuggestions([]); 
+                }
               } else setOriginSuggestions([]);
             }, 250);
           }}
@@ -77,7 +85,15 @@ export default function PlannerForm({ onSubmit }: Props) {
             if (destTimerRef.current) clearTimeout(destTimerRef.current);
             destTimerRef.current = setTimeout(async () => {
               if (t.length >= 3) {
-                try { const res = await autocomplete(t, 5); setDestSuggestions(res); } catch { setDestSuggestions([]); }
+                try { 
+                  console.log('Fetching autocomplete for destination:', t);
+                  const res = await autocomplete(t, 5); 
+                  console.log('Destination autocomplete results:', res);
+                  setDestSuggestions(res); 
+                } catch (error) { 
+                  console.error('Destination autocomplete error:', error);
+                  setDestSuggestions([]); 
+                }
               } else setDestSuggestions([]);
             }, 250);
           }}

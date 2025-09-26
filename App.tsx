@@ -5,6 +5,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { Platform } from 'react-native';
 
 // Screens
 import HomeScreen from '@/screens/Home';
@@ -54,6 +55,11 @@ const navigationTheme: Theme = {
   colors: {
     ...DefaultTheme.colors,
     background: '#ffffff',
+    primary: '#3b82f6',
+    card: '#ffffff',
+    text: '#111827',
+    border: '#e5e7eb',
+    notification: '#ef4444',
   },
 };
 
@@ -75,13 +81,37 @@ export default function App() {
             <Tab.Navigator
               screenOptions={({ route }) => ({
                 headerShown: true,
+                tabBarStyle: {
+                  backgroundColor: '#ffffff',
+                  borderTopColor: '#e5e7eb',
+                  borderTopWidth: 1,
+                  paddingBottom: Platform.OS === 'ios' ? 20 : 5,
+                  paddingTop: 5,
+                  height: Platform.OS === 'ios' ? 85 : 60,
+                },
+                tabBarActiveTintColor: '#3b82f6',
+                tabBarInactiveTintColor: '#6b7280',
+                tabBarLabelStyle: {
+                  fontSize: 12,
+                  fontWeight: '600',
+                },
+                headerStyle: {
+                  backgroundColor: '#ffffff',
+                  borderBottomColor: '#e5e7eb',
+                  borderBottomWidth: 1,
+                },
+                headerTitleStyle: {
+                  fontSize: 18,
+                  fontWeight: '700',
+                  color: '#111827',
+                },
                 tabBarIcon: ({ color, size }) => {
-                  if (route.name === 'Home') return <Ionicons name="home" size={size} color={color} />;
-                  if (route.name === 'Plan') return <MaterialCommunityIcons name="map-search" size={size} color={color} />;
-                  if (route.name === 'Results') return <MaterialCommunityIcons name="routes" size={size} color={color} />;
-                  if (route.name === 'Trip') return <Ionicons name="navigate" size={size} color={color} />;
-                  if (route.name === 'Wallet') return <Ionicons name="wallet" size={size} color={color} />;
-                  if (route.name === 'Profile') return <Ionicons name="person" size={size} color={color} />;
+                  if (route.name === 'Home') return <Ionicons name="home" size={24} color={color} />;
+                  if (route.name === 'Plan') return <MaterialCommunityIcons name="map-search" size={24} color={color} />;
+                  if (route.name === 'Results') return <MaterialCommunityIcons name="routes" size={24} color={color} />;
+                  if (route.name === 'Trip') return <Ionicons name="navigate" size={24} color={color} />;
+                  if (route.name === 'Wallet') return <Ionicons name="wallet" size={24} color={color} />;
+                  if (route.name === 'Profile') return <Ionicons name="person" size={24} color={color} />;
                   return null;
                 },
               })}
@@ -95,7 +125,22 @@ export default function App() {
             </Tab.Navigator>
           )}
         </Stack.Screen>
-        <Stack.Screen name="RouteMap" component={RouteMapScreen} options={{ title: 'Route Map' }} />
+        <Stack.Screen 
+          name="RouteMap" 
+          component={RouteMapScreen} 
+          options={{ 
+            title: 'Route Map',
+            headerStyle: {
+              backgroundColor: '#ffffff',
+            },
+            headerTitleStyle: {
+              fontSize: 18,
+              fontWeight: '700',
+              color: '#111827',
+            },
+            headerTintColor: '#3b82f6',
+          }} 
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

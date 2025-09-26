@@ -8,7 +8,7 @@ function formatPrompt(itineraries: Itinerary[], prefs: Preferences): string {
   const header = `You are a mobility assistant. Rank the itineraries by the user's preferences. Return STRICT JSON object: {"items":[{"id":"...","score":number,"rationale":["..."]}]}. No prose.`;
   const prefsText = `prefs: time=${prefs.weightTime}, cost=${prefs.weightCost}, comfort=${prefs.weightComfort}`;
   const items = itineraries
-    .map((it) => `- ${it.id}: time=${Math.round(it.totalTimeMin)}m, cost=$${(it.totalCostCents / 100).toFixed(2)}, comfort=${Math.round(it.averageComfortScore * 100)}%, legs=${it.legs.map((l) => l.mode).join('>')}`)
+    .map((it) => `- ${it.id}: time=${Math.round(it.totalTimeMin)}m, cost=₹${(it.totalCostCents / 100).toFixed(2)}, comfort=${Math.round(it.averageComfortScore * 100)}%, legs=${it.legs.map((l) => l.mode).join('>')}`)
     .join('\n');
   return [header, prefsText, items].join('\n');
 }
@@ -127,7 +127,7 @@ export async function llmPredictCost(params: {
 }): Promise<number> {
   const { originText, destinationText, cityHint, distanceKm, mode, apiKey } = params;
   const sys = 'You are a cost prediction expert for urban transportation. Given trip details, predict the realistic cost in cents (USD). Consider local pricing, distance, and transport mode. Return only a JSON number.';
-  const user = `Trip: ${originText} -> ${destinationText}${cityHint ? ` in ${cityHint}` : ''}\nDistance: ${distanceKm.toFixed(1)} km\nMode: ${mode}\nPredict cost in cents (USD). Return JSON: {"costCents": number}`;
+  const user = `Trip: ${originText} -> ${destinationText}${cityHint ? ` in ${cityHint}` : ''}\nDistance: ${distanceKm.toFixed(1)} km\nMode: ${mode}\nPredict cost in cents (INR). Return JSON: {"costCents": number}`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);

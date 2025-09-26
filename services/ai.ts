@@ -19,7 +19,7 @@ export function recommend(itineraries: Itinerary[], prefs: Preferences): Recomme
 function buildRationale(it: Itinerary, prefs: Preferences): string[] {
   const lines: string[] = [];
   if (prefs.weightTime > 0.4) lines.push(`Favors time: ${Math.round(it.totalTimeMin)} min total`);
-  if (prefs.weightCost > 0.4) lines.push(`Favors cost: $${(it.totalCostCents / 100).toFixed(2)}`);
+  if (prefs.weightCost > 0.4) lines.push(`Favors cost: ₹${(it.totalCostCents / 100).toFixed(2)}`);
   if (prefs.weightComfort > 0.4) lines.push(`Favors comfort: ${Math.round(it.averageComfortScore * 100)}%`);
   if (it.legs.length - 1 > 0) lines.push(`${it.legs.length - 1} transfers`);
   return lines;
