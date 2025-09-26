@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert, Button } from 'react-native';
 import PlannerForm from '@/components/PlannerForm';
-import { planItineraries, rankItineraries } from '@/services/routing';
+import { planItineraries, rankItineraries, planItinerariesWithLLM } from '@/services/routing';
 import type { LatLng } from '@/types/domain';
 import { usePreferencesStore } from '@/store/preferences';
 import ItineraryCard from '@/components/ItineraryCard';
+import { useResultsStore } from '@/store/results';
+import { useApiKeyStore } from '@/store/apiKey';
+import { llmRerank } from '@/services/llm';
+import { geocodeOne } from '@/services/geocoder';
 
 function geocodeMock(name: string): LatLng {
   // Simplified stable mock points
@@ -18,17 +22,41 @@ function geocodeMock(name: string): LatLng {
 
 export default function PlanScreen() {
   const { preferences } = usePreferencesStore();
-  const [results, setResults] = useState([]);
+  const [results, setResults] = useState<any[]>([]);
+  const { openaiApiKey } = useApiKeyStore();
+  const { setResults: setGlobalResults } = useResultsStore();
 
-  const onSubmit = async ({ origin, destination }: { origin: string; destination: string }) => {
+  const onSubmit = async ({ origin, destination, originCoords, destinationCoords }: { origin: string; destination: string; originCoords?: LatLng; destinationCoords?: LatLng }) => {
     try {
-      const originLoc = geocodeMock(origin);
-      const destLoc = geocodeMock(destination);
-      const options = await planItineraries(originLoc, destLoc, preferences);
+      const [o, d] = originCoords && destinationCoords
+        ? [null, null]
+        : await Promise.all([geocodeOne(origin), geocodeOne(destination)]);
+      const originLoc = originCoords ?? (o?.location ?? geocodeMock(origin));
+      const destLoc = destinationCoords ?? (d?.location ?? geocodeMock(destination));
+      const options = openaiApiKey
+        ? await planItinerariesWithLLM(originLoc, destLoc, origin, destination, preferences, openaiApiKey)
+        : await planItineraries(originLoc, destLoc, preferences);
       const ranked = rankItineraries(options, preferences);
       setResults(ranked as any);
+      setGlobalResults(ranked as any);
     } catch (e: any) {
       Alert.alert('Planning failed', e?.message ?? 'Unknown error');
+    }
+  };
+
+  const onRerankWithAI = async () => {
+    try {
+      if (!openaiApiKey) {
+        Alert.alert('Missing API Key', 'Set your OpenAI API key in Profile');
+        return;
+      }
+      const recs = await llmRerank(results as any, preferences, openaiApiKey);
+      if (!recs.length) return;
+      const map = new Map(recs.map((r) => [r.id, r]));
+      const sorted = [...results].sort((a, b) => (map.get(b.id)?.score ?? 0) - (map.get(a.id)?.score ?? 0));
+      setResults(sorted);
+    } catch (e: any) {
+      Alert.alert('LLM rerank failed', e?.message ?? 'Error');
     }
   };
 
@@ -37,7 +65,10 @@ export default function PlanScreen() {
       <Text style={{ fontSize: 22, fontWeight: '700' }}>Plan a trip</Text>
       <PlannerForm onSubmit={onSubmit} />
       <View style={{ height: 1, backgroundColor: '#eee', width: '90%' }} />
-      <Text style={{ fontSize: 18, fontWeight: '600' }}>Results</Text>
+      <View style={{ width: '90%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text style={{ fontSize: 18, fontWeight: '600' }}>Results</Text>
+        <Button title="Rerank with AI" onPress={onRerankWithAI} />
+      </View>
       <View style={{ width: '90%', gap: 12 }}>
         {(results as any[]).map((it) => (
           <ItineraryCard key={it.id} itinerary={it} />
