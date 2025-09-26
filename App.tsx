@@ -33,6 +33,9 @@ import WalletScreen from '@/screens/Wallet';
 import ProfileScreen from '@/screens/Profile';
 import RouteMapScreen from '@/screens/RouteMap';
 import ResultsScreenReal from '@/screens/Results';
+import LoginScreen from '@/screens/Login';
+import SignupScreen from '@/screens/Signup';
+import { useAuthStore } from '@/store/auth';
 
 type RootTabParamList = {
   Home: undefined;
@@ -55,10 +58,18 @@ const navigationTheme: Theme = {
 };
 
 export default function App() {
+  const { user, hydrate } = useAuthStore();
+  React.useEffect(() => { void hydrate(); }, [hydrate]);
   return (
     <NavigationContainer theme={navigationTheme}>
       <StatusBar style="dark" />
       <Stack.Navigator>
+        {!user ? (
+          <>
+            <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+            <Stack.Screen name="Signup" component={SignupScreen} options={{ headerShown: false }} />
+          </>
+        ) : null}
         <Stack.Screen name="Root" options={{ headerShown: false }}>
           {() => (
             <Tab.Navigator
