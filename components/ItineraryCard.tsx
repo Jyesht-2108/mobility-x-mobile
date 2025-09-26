@@ -6,6 +6,8 @@ import { FontAwesome, MaterialCommunityIcons, Ionicons } from '@expo/vector-icon
 import { processPayment } from '@/services/payments';
 import { useApiKeyStore } from '@/store/apiKey';
 import { llmPredictCost } from '@/services/llm';
+import { usePreferencesStore } from '@/store/preferences';
+import PaymentModal from './PaymentModal';
 
 function renderModeIcon(mode: string) {
   const size = 18;
@@ -36,40 +38,31 @@ function comfortColor(pct: number) {
 
 type Props = {
   itinerary: Itinerary;
+  allItineraries?: Itinerary[];
 };
 
-export default function ItineraryCard({ itinerary }: Props) {
+export default function ItineraryCard({ itinerary, allItineraries = [] }: Props) {
   const navigation = useNavigation<any>();
   const { openaiApiKey } = useApiKeyStore();
+  const { learnFromSelection } = usePreferencesStore();
   const [isProcessing, setIsProcessing] = useState(false);
   const [predictedCost, setPredictedCost] = useState<number | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   
   const comfortPct = itinerary.averageComfortScore;
   const pctText = Math.round(comfortPct * 100);
 
-  const handlePayment = async () => {
-    if (isProcessing) return;
-    
-    setIsProcessing(true);
-    try {
-      const cost = predictedCost || itinerary.totalCostCents;
-      const result = await processPayment(
-        itinerary.id,
-        cost,
-        `Trip: ${itinerary.legs.map(l => l.mode).join(' + ')}`
-      );
-      
-      if (result.success) {
-        Alert.alert('Payment Successful', `Paid $${(cost / 100).toFixed(2)} for your trip!`);
-        navigation.navigate('Wallet');
-      } else {
-        Alert.alert('Payment Failed', result.error || 'Insufficient balance');
+  const handlePaymentSuccess = async () => {
+    // AI Learning from user selection
+    if (allItineraries.length > 0) {
+      try {
+        const message = await learnFromSelection(itinerary, allItineraries);
+        Alert.alert('AI Update', message);
+      } catch (error) {
+        console.log('AI learning failed:', error);
       }
-    } catch (error: any) {
-      Alert.alert('Error', error?.message || 'Payment failed');
-    } finally {
-      setIsProcessing(false);
     }
+    navigation.navigate('Wallet');
   };
 
   const predictCost = async () => {
@@ -122,10 +115,14 @@ export default function ItineraryCard({ itinerary }: Props) {
         </View>
 
         <View style={{ gap: 6 }}>
-          <View style={{ height: 8, backgroundColor: '#f3f4f6', borderRadius: 9999, overflow: 'hidden' }}>
-            <View style={{ width: `${pctText}%`, height: 8, backgroundColor: comfortColor(comfortPct) }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ flex: 1, height: 8, backgroundColor: '#f3f4f6', borderRadius: 9999, overflow: 'hidden' }}>
+              <View style={{ width: `${pctText}%`, height: 8, backgroundColor: comfortColor(comfortPct) }} />
+            </View>
+            <Text style={{ fontSize: 12, color: '#374151', fontWeight: '600', minWidth: 60 }}>
+              Comfort: {pctText}%
+            </Text>
           </View>
-          <Text style={{ fontSize: 12, color: '#374151' }}>Comfort: {pctText}%</Text>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
@@ -141,10 +138,9 @@ export default function ItineraryCard({ itinerary }: Props) {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={handlePayment}
-        disabled={isProcessing}
+        onPress={() => setShowPaymentModal(true)}
         style={{
-          backgroundColor: isProcessing ? '#9ca3af' : '#3b82f6',
+          backgroundColor: '#3b82f6',
           borderRadius: 8,
           paddingVertical: 12,
           paddingHorizontal: 16,
@@ -156,9 +152,16 @@ export default function ItineraryCard({ itinerary }: Props) {
       >
         <Ionicons name="card" size={16} color="#fff" />
         <Text style={{ color: '#fff', fontWeight: '600', fontSize: 14 }}>
-          {isProcessing ? 'Processing...' : 'Pay Now'}
+          Book & Pay ${(itinerary.totalCostCents / 100).toFixed(2)}
         </Text>
       </TouchableOpacity>
+
+      <PaymentModal
+        visible={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        itinerary={itinerary}
+        onSuccess={handlePaymentSuccess}
+      />
     </View>
   );
 }

@@ -6,7 +6,7 @@ type PreferencesState = {
   preferences: Preferences;
   setPreferences: (prefs: Partial<Preferences>) => void;
   hydrate: () => Promise<void>;
-  learnFromSelection: (selectedItinerary: Itinerary, allItineraries: Itinerary[]) => string;
+  learnFromSelection: (selectedItinerary: Itinerary, allItineraries: Itinerary[]) => Promise<string>;
 };
 
 const DEFAULT_PREFS: Preferences = {
@@ -37,59 +37,53 @@ export const usePreferencesStore = create<PreferencesState>((set, get) => ({
       // ignore
     }
   },
-  learnFromSelection: (selectedItinerary, allItineraries) => {
-    const current = get().preferences;
-    const others = allItineraries.filter(it => it.id !== selectedItinerary.id);
+  learnFromSelection: async (selectedItinerary: Itinerary, allItineraries: Itinerary[]) => {
+    const currentPrefs = get().preferences;
+    const otherItineraries = allItineraries.filter(it => it.id !== selectedItinerary.id);
     
-    if (others.length === 0) return '';
+    if (otherItineraries.length === 0) return 'No other options to learn from';
     
-    // Calculate averages of non-selected options
-    const avgTime = others.reduce((sum, it) => sum + it.totalTimeMin, 0) / others.length;
-    const avgCost = others.reduce((sum, it) => sum + it.totalCostCents, 0) / others.length;
-    const avgComfort = others.reduce((sum, it) => sum + it.averageComfortScore, 0) / others.length;
+    // Calculate average metrics of non-selected itineraries
+    const avgTime = otherItineraries.reduce((sum, it) => sum + it.totalTimeMin, 0) / otherItineraries.length;
+    const avgCost = otherItineraries.reduce((sum, it) => sum + it.totalCostCents, 0) / otherItineraries.length;
+    const avgComfort = otherItineraries.reduce((sum, it) => sum + it.averageComfortScore, 0) / otherItineraries.length;
     
     // Determine what the user prioritized
-    const timeFaster = selectedItinerary.totalTimeMin < avgTime;
-    const costHigher = selectedItinerary.totalCostCents > avgCost;
-    const comfortHigher = selectedItinerary.averageComfortScore > avgComfort;
+    const timeDiff = selectedItinerary.totalTimeMin - avgTime;
+    const costDiff = selectedItinerary.totalCostCents - avgCost;
+    const comfortDiff = selectedItinerary.averageComfortScore - avgComfort;
     
-    // Adjust weights based on user choice (small increments)
-    const adjustment = 0.05;
-    let newWeights = { ...current };
-    let feedback = '';
+    // Learning rate (small adjustments)
+    const learningRate = 0.05;
+    let message = '';
     
-    if (timeFaster && costHigher) {
-      // User prioritized speed over cost
-      newWeights.weightTime = Math.min(1, current.weightTime + adjustment);
-      newWeights.weightCost = Math.max(0, current.weightCost - adjustment);
-      feedback = 'We noticed you prioritized speed over cost and have adjusted your preferences for future planning.';
-    } else if (comfortHigher && costHigher) {
-      // User prioritized comfort over cost
-      newWeights.weightComfort = Math.min(1, current.weightComfort + adjustment);
-      newWeights.weightCost = Math.max(0, current.weightCost - adjustment);
-      feedback = 'We noticed you prioritized comfort over cost and have adjusted your preferences for future planning.';
-    } else if (timeFaster && comfortHigher) {
-      // User prioritized both speed and comfort
-      newWeights.weightTime = Math.min(1, current.weightTime + adjustment * 0.5);
-      newWeights.weightComfort = Math.min(1, current.weightComfort + adjustment * 0.5);
-      newWeights.weightCost = Math.max(0, current.weightCost - adjustment);
-      feedback = 'We noticed you prioritized speed and comfort and have adjusted your preferences for future planning.';
-    } else if (selectedItinerary.totalCostCents < avgCost) {
-      // User prioritized cost savings
-      newWeights.weightCost = Math.min(1, current.weightCost + adjustment);
-      newWeights.weightTime = Math.max(0, current.weightTime - adjustment * 0.5);
-      newWeights.weightComfort = Math.max(0, current.weightComfort - adjustment * 0.5);
-      feedback = 'We noticed you prioritized cost savings and have adjusted your preferences for future planning.';
+    // Adjust weights based on user choice
+    if (timeDiff < -5) {
+      // User chose faster option
+      const newWeightTime = Math.min(1, currentPrefs.weightTime + learningRate);
+      const newWeightCost = Math.max(0, currentPrefs.weightCost - learningRate * 0.5);
+      const newWeightComfort = Math.max(0, currentPrefs.weightComfort - learningRate * 0.5);
+      get().setPreferences({ weightTime: newWeightTime, weightCost: newWeightCost, weightComfort: newWeightComfort });
+      message = 'We noticed you prioritized speed on this trip and have adjusted your preferences for future planning.';
+    } else if (costDiff < -50) {
+      // User chose cheaper option
+      const newWeightCost = Math.min(1, currentPrefs.weightCost + learningRate);
+      const newWeightTime = Math.max(0, currentPrefs.weightTime - learningRate * 0.5);
+      const newWeightComfort = Math.max(0, currentPrefs.weightComfort - learningRate * 0.5);
+      get().setPreferences({ weightTime: newWeightTime, weightCost: newWeightCost, weightComfort: newWeightComfort });
+      message = 'We noticed you prioritized cost savings on this trip and have adjusted your preferences for future planning.';
+    } else if (comfortDiff > 0.1) {
+      // User chose more comfortable option
+      const newWeightComfort = Math.min(1, currentPrefs.weightComfort + learningRate);
+      const newWeightTime = Math.max(0, currentPrefs.weightTime - learningRate * 0.5);
+      const newWeightCost = Math.max(0, currentPrefs.weightCost - learningRate * 0.5);
+      get().setPreferences({ weightTime: newWeightTime, weightCost: newWeightCost, weightComfort: newWeightComfort });
+      message = 'We noticed you prioritized comfort on this trip and have adjusted your preferences for future planning.';
+    } else {
+      message = 'Your selection has been noted for future recommendations.';
     }
     
-    // Normalize weights to sum to 1
-    const total = newWeights.weightTime + newWeights.weightCost + newWeights.weightComfort;
-    newWeights.weightTime = newWeights.weightTime / total;
-    newWeights.weightCost = newWeights.weightCost / total;
-    newWeights.weightComfort = newWeights.weightComfort / total;
-    
-    get().setPreferences(newWeights);
-    return feedback;
+    return message;
   },
 }));
 

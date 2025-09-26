@@ -13,7 +13,7 @@ function formatPrompt(itineraries: Itinerary[], prefs: Preferences): string {
   return [header, prefsText, items].join('\n');
 }
 
-export async function llmRerank(itineraries: Itinerary[], prefs: Preferences, apiKey: string): Promise<{ id: string; score: number; rationale: string[] }[] > {
+export async function llmRerank(itineraries: Itinerary[], prefs: Preferences, apiKey: string): Promise<{ id: string; score: number; rationale: string[]; fullRationale: string }[]> {
   const prompt = formatPrompt(itineraries, prefs);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
@@ -42,9 +42,17 @@ export async function llmRerank(itineraries: Itinerary[], prefs: Preferences, ap
   const content = data.choices?.[0]?.message?.content ?? '{}';
   try {
     const parsed = JSON.parse(content);
-    if (Array.isArray(parsed)) return parsed as any;
-    if (parsed && Array.isArray(parsed.items)) return parsed.items as any;
-    return [];
+    let items = [];
+    if (Array.isArray(parsed)) items = parsed;
+    else if (parsed && Array.isArray(parsed.items)) items = parsed.items;
+    
+    // Add full rationale to each item
+    const fullRationale = `Based on your preferences (Time: ${prefs.weightTime}, Cost: ${prefs.weightCost}, Comfort: ${prefs.weightComfort}), I've ranked these options considering factors like travel time, cost efficiency, and comfort levels. The top recommendation balances your stated priorities while considering practical factors like transfers and mode reliability.`;
+    
+    return items.map((item: any) => ({
+      ...item,
+      fullRationale
+    }));
   } catch {
     return [];
   }

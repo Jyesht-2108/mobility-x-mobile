@@ -44,6 +44,8 @@ export default function PlanScreen() {
     }
   };
 
+  const [aiRationale, setAiRationale] = useState<string>('');
+
   const onRerankWithAI = async () => {
     try {
       if (!openaiApiKey) {
@@ -55,6 +57,7 @@ export default function PlanScreen() {
       const map = new Map(recs.map((r) => [r.id, r]));
       const sorted = [...results].sort((a, b) => (map.get(b.id)?.score ?? 0) - (map.get(a.id)?.score ?? 0));
       setResults(sorted);
+      setAiRationale(recs[0]?.fullRationale || '');
     } catch (e: any) {
       Alert.alert('LLM rerank failed', e?.message ?? 'Error');
     }
@@ -69,9 +72,24 @@ export default function PlanScreen() {
         <Text style={{ fontSize: 18, fontWeight: '600' }}>Results</Text>
         <Button title="Rerank with AI" onPress={onRerankWithAI} />
       </View>
+      {aiRationale ? (
+        <View style={{ 
+          width: '90%', 
+          backgroundColor: 'rgba(59, 130, 246, 0.1)', 
+          borderRadius: 12, 
+          padding: 16, 
+          borderWidth: 1, 
+          borderColor: 'rgba(59, 130, 246, 0.2)',
+          marginBottom: 8
+        }}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: '#1e40af', marginBottom: 8 }}>AI Rationale:</Text>
+          <Text style={{ fontSize: 14, color: '#374151', lineHeight: 20 }}>{aiRationale}</Text>
+        </View>
+      ) : null}
+
       <View style={{ width: '90%', gap: 12 }}>
         {(results as any[]).map((it) => (
-          <ItineraryCard key={it.id} itinerary={it} />
+          <ItineraryCard key={it.id} itinerary={it} allItineraries={results} />
         ))}
       </View>
     </ScrollView>
