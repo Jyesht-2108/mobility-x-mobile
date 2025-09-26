@@ -7,14 +7,7 @@ import { Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 // Screens
-function HomeScreen() {
-  return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ fontSize: 20, fontWeight: '600' }}>Welcome to Multimodal Mobility</Text>
-      <Text>Plan a trip to see multimodal AI-powered routes.</Text>
-    </View>
-  );
-}
+import HomeScreen from '@/screens/Home';
 
 import PlanScreen from '@/screens/Plan';
 
